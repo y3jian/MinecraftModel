@@ -1,1 +1,1 @@
-print("test")
+# Voxelize the mesh

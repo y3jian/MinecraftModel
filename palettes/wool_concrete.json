@@ -1,0 +1,22 @@
+[
+  ["minecraft:white_wool",      [234,236,236]],
+  ["minecraft:light_gray_wool", [142,142,134]],
+  ["minecraft:gray_wool",       [62,68,71]],
+  ["minecraft:black_wool",      [20,21,25]],
+  ["minecraft:red_wool",        [161,39,35]],
+  ["minecraft:orange_wool",     [241,118,20]],
+  ["minecraft:yellow_wool",     [248,198,39]],
+  ["minecraft:lime_wool",       [112,185,25]],
+  ["minecraft:green_wool",      [84,109,27]],
+  ["minecraft:light_blue_wool", [58,175,217]],
+  ["minecraft:cyan_wool",       [21,137,145]],
+  ["minecraft:blue_wool",       [44,46,143]],
+  ["minecraft:purple_wool",     [122,42,173]],
+  ["minecraft:magenta_wool",    [199,78,189]],
+  ["minecraft:pink_wool",       [237,141,172]],
+  ["minecraft:brown_wool",      [114,71,40]],
+  ["minecraft:white_concrete",  [207,213,214]],
+  ["minecraft:light_gray_concrete", [125,125,115]],
+  ["minecraft:gray_concrete",   [55,58,62]],
+  ["minecraft:black_concrete",  [8,10,15]]
+]
