@@ -1,1 +1,0 @@
-# Voxelize the mesh
