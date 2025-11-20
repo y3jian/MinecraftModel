@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 # scan2schem.py
 # Convert a 3D mesh (OBJ/PLY/GLB) to a Minecraft structure by voxelizing and mapping to blocks,
-# then export as either .schem (Sponge v2) or .schematic (MCEdit legacy) based on the --out extension.
+# then export as .litematic file to be used with Litematica.
 
-import os
+import sys, os
 import argparse
 import numpy as np
 import trimesh
 
-from colour_mapper import BlockPalette
-from exporter_schem import write_schem
-from exporter_schematic import write_schematic
 
+from colour_mapper import BlockPalette
+from litemapy import Region, BlockState
+from exporter_litematic import export_litematic
+import inspect, exporter_litematic
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 def voxelize_mesh(mesh_path: str, target_height: int, min_component: int):
     """
     Load mesh, normalize size, voxelize (solid), prune tiny components.
     Returns:
-        block_coords: (N, 3) int voxel coordinates within [0..W-1], [0..H-1], [0..D-1]
-        block_colors: (N, 3) uint8 colors per occupied voxel
+        block_coords: (N, 3) int voxel coordinates (x,y,z)
+        block_colors: (N, 3) RGB
         grid_shape:   (W, H, D)
     """
     mesh = trimesh.load(mesh_path, force='mesh')
 
-    # Clean up faces/verts (API-safe)
+    # Clean up mesh
     mesh.remove_unreferenced_vertices()
     mesh.update_faces(mesh.nondegenerate_faces())
 
@@ -43,6 +46,7 @@ def voxelize_mesh(mesh_path: str, target_height: int, min_component: int):
     coords_f = vox.points  # (N,3) float
     if coords_f.size == 0:
         raise SystemExit("Voxelization produced no voxels. Try increasing --height or check the mesh.")
+    
     ci = np.floor(coords_f - coords_f.min(axis=0)).astype(int)
 
     W = int(ci[:, 0].max() + 1)
@@ -135,10 +139,10 @@ def main():
     ap.add_argument("--palette", default="palettes/wool_concrete.json", help="Path to block palette JSON")
     ap.add_argument("--height", type=int, default=64, help="Target model height in blocks")
     ap.add_argument("--min_component", type=int, default=50, help="Prune components smaller than this many voxels")
-    ap.add_argument("--out", default="scan.schem", help="Output file (.schem for Sponge v2, .schematic for MCEdit)")
+    ap.add_argument("--out", default="data/examples/scan.litematic",
+                help="Output .litematic file for Litematica")
     args = ap.parse_args()
 
-    # Resolve output path and ensure parent folder exists
     out_abs = os.path.abspath(os.path.expanduser(args.out))
     os.makedirs(os.path.dirname(out_abs), exist_ok=True)
 
@@ -147,24 +151,26 @@ def main():
     print("Palette:", os.path.abspath(args.palette))
     print("Output:", out_abs)
 
-    # Voxelize, color, prune
+    # Voxelize and color
     coords_i, colors, grid_shape = voxelize_mesh(args.mesh, args.height, args.min_component)
     W, H, D = grid_shape
     print(f"Grid: {W} x {H} x {D} | occupied voxels: {len(coords_i)}")
 
-    # Map to blocks and build sparse grid
+    # Color → block IDs
     block_grid = build_block_grid(coords_i, colors, grid_shape, args.palette)
 
-    # Pick exporter by extension
-    if out_abs.lower().endswith(".schematic"):
-        out_path, out_size = write_schematic(block_grid, out_abs)
-        fmt = "MCEdit .schematic"
-    else:
-        out_path, out_size = write_schem(block_grid, out_abs)  # Sponge v2
-        fmt = "Sponge .schem"
+    # Export as .litematic
+    name = os.path.splitext(os.path.basename(args.out))[0]
+    out_path, out_size = export_litematic(
+        block_grid,
+        out_abs,
+        name,
+        "scan2schem",
+        "test",
+    )
 
-    print(f"Saved ({fmt}): {out_path}  (bytes: {out_size})")
-    print(f"Done. Tip: paste WITHOUT '-a' to ensure air is placed (or use Amulet to import into a world).")
+    print(f"Saved .litematic: {out_path}  (bytes: {out_size})")
+    print("Tip: move this file to %APPDATA%\\.minecraft\\schematics and load it with Litematica.")
 
 
 if __name__ == "__main__":

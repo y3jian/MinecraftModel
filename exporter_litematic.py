@@ -1,31 +1,66 @@
 # exporter_litematic.py
-import os
-from litemapy import Schematic, Region, BlockState  # pip install litemapy
+"""
+Export a voxel grid to a Litematica .litematic file using litemapy.
 
-def write_litematic(block_ids_3d, path, name="scan2schem", author="you", desc="Generated from voxel grid"):
+Expected input:
+    block_ids_3d: numpy array of shape (W, H, D)
+                  entries are either None or 'minecraft:block_name' strings.
+
+We create a single Region at origin (0,0,0) with size (W,H,D),
+leave unspecified cells as air, and save as a valid .litematic.
+"""
+
+import os
+import numpy as np
+from litemapy import Region, BlockState
+
+
+def export_litematic(block_ids_3d, path, name="scan2schem", author="scan2schem", description="Generated from mesh"):
     """
-    block_ids_3d: np.ndarray (W,H,D) of either None or 'minecraft:block' strings.
-    path: output .litematic file path
+    Write a .litematic file.
+
+    Args:
+        block_ids_3d: np.ndarray, shape (W, H, D), dtype=object
+                      values: None or 'minecraft:block_name'
+        path: output file path (will be created, dirs too)
+        name: schematic name (shown in Litematica UI)
+        author: author string
+        description: description string
+
+    Returns:
+        (abs_path, file_size_bytes)
     """
+    # Normalize path and ensure parent directory exists
     path = os.path.abspath(os.path.expanduser(path))
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
+    if not isinstance(block_ids_3d, np.ndarray):
+        block_ids_3d = np.asarray(block_ids_3d, dtype=object)
+
     W, H, D = block_ids_3d.shape
 
-    # Create one region at the schematic origin (0,0,0) sized to the grid
-    reg = Region(0, 0, 0, W, H, D)
+    # Create one Region at origin with full size
+    # Region(origin_x, origin_y, origin_z, width, height, length)
+    region = Region(0, 0, 0, W, H, D)
 
-    # Set blocks (skip None -> leaves air)
-    # NOTE: Region coords are x,y,z with 0..W-1 etc., same order we used
-    # Just iterate over the grid and set non-air blocks
+    # Fill blocks: leave None as air (default), set everything else
+    # Coordinate order matches how you built block_grid: (x, y, z)
     for x in range(W):
         for y in range(H):
             for z in range(D):
                 bid = block_ids_3d[x, y, z]
-                if bid:  # not None
-                    reg.setblock(x, y, z, BlockState(bid))
+                if bid is None:
+                    continue  # remains air
+                # bid should be like 'minecraft:white_concrete'
+                region.setblock(x, y, z, BlockState(str(bid)))
 
-    # Wrap region into a schematic and save
-    schem = reg.as_schematic(name=name, author=author, description=desc)
-    schem.save(path)  # writes a valid .litematic file
-    return path, os.path.getsize(path)
+    # Turn region into a schematic and save
+    schematic = region.as_schematic(
+        name=name,
+        author=author,
+        description=description
+    )
+
+    schematic.save(path)
+    size = os.path.getsize(path)
+    return path, size
