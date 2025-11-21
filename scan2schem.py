@@ -11,7 +11,6 @@ import trimesh
 from colour_mapper import BlockPalette
 from litemapy import Region, BlockState
 from exporter_litematic import export_litematic
-import inspect, exporter_litematic
 
 sys.path.insert(0, os.path.dirname(__file__))
 

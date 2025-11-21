@@ -7,7 +7,7 @@
 Scan2Craft takes an input 3D scan, voxelizes a mesh, samples texture colours, maps colours to a customizable block palette, and exports a Litematica schematic ready to be used in Minecraft!
 
 ### Features
-- Voxelizes and mesh at a chosen height
+- Voxelizes any mesh at a chosen height
 - Samples texture colours using UVs
 - Maps colours to the nearest Minecraft block using CIE-LAB distance
 - Exports .litematic files with litemapy
@@ -26,9 +26,9 @@ Use the 3D scans in
 ```bash
 /data/scans
 ```
- or upload a scab to the same folder (.glb, .obj, .ply).
+ or upload a scan to the same folder (.glb, .obj, .ply).
 
-following this example:
+Following this example:
 ```bash
 python scan2schem.py \
   --mesh data/scans/helloKitty.glb \
