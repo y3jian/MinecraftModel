@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # scan2schem.py
 # Convert a 3D mesh (OBJ/PLY/GLB) to a Minecraft structure by voxelizing and mapping to blocks,
 # then export as .litematic file to be used with Litematica.
@@ -25,6 +24,7 @@ def voxelize_mesh(mesh_path: str, target_height: int, min_component: int):
         grid_shape:   (W, H, D)
     """
     mesh = trimesh.load(mesh_path, force='mesh')
+    print("Using vertex colors:", hasattr(mesh.visual, "vertex_colors") and mesh.visual.vertex_colors is not None)
 
     # Clean up mesh
     mesh.remove_unreferenced_vertices()
@@ -54,8 +54,10 @@ def voxelize_mesh(mesh_path: str, target_height: int, min_component: int):
     D = int(ci[:, 2].max() + 1)
 
     # Simple per-voxel color: nearest vertex color if present; otherwise mid-gray
+    colors = None
+
+    # 1) Vertex colors
     if mesh.visual.kind == "vertex" and getattr(mesh.visual, "vertex_colors", None) is not None:
-        # Try trimesh KDTree, fall back to scipy if needed
         try:
             from trimesh.kdtree import KDTree
             kdt = KDTree(mesh.vertices)
@@ -67,12 +69,46 @@ def voxelize_mesh(mesh_path: str, target_height: int, min_component: int):
                 _, nn_idx = kdt.query(coords_f)
             except Exception:
                 nn_idx = None
+
         if nn_idx is not None:
             vcols = mesh.visual.vertex_colors[:, :3].astype(np.float32)
             colors = vcols[nn_idx]
-        else:
-            colors = np.full((ci.shape[0], 3), 190, dtype=np.float32)
-    else:
+
+    # 2) Texture sampling (UVs + baseColorTexture)
+    if colors is None and mesh.visual.kind == "texture":
+        has_uv = getattr(mesh.visual, "uv", None) is not None
+        has_tex = getattr(mesh.visual, "material", None) is not None and \
+                  getattr(mesh.visual.material, "baseColorTexture", None) is not None
+        if has_uv and has_tex:
+            # nearest vertex for each voxel
+            try:
+                from trimesh.kdtree import KDTree
+                kdt = KDTree(mesh.vertices)
+                _, nn_idx = kdt.query(coords_f)
+            except Exception:
+                try:
+                    from scipy.spatial import cKDTree
+                    kdt = cKDTree(mesh.vertices)
+                    _, nn_idx = kdt.query(coords_f)
+                except Exception:
+                    nn_idx = None
+
+            if nn_idx is not None:
+                uv = mesh.visual.uv[nn_idx]  # (N,2), in [0,1]
+                tex_img = mesh.visual.material.baseColorTexture
+                tex = np.array(tex_img.convert("RGB"), dtype=np.uint8)
+                h_tex, w_tex, _ = tex.shape
+
+                # clamp uv to [0,1], flip v for image coordinates
+                u = np.clip(uv[:, 0], 0.0, 1.0)
+                v = np.clip(uv[:, 1], 0.0, 1.0)
+                x_pix = (u * (w_tex - 1)).astype(int)
+                y_pix = ((1.0 - v) * (h_tex - 1)).astype(int)
+
+                colors = tex[y_pix, x_pix, :].astype(np.float32)
+
+    # 3) Fallback if everything else failed
+    if colors is None:
         colors = np.full((ci.shape[0], 3), 190, dtype=np.float32)
 
     # Prune tiny floating components using 6-neighborhood flood fill on the occupancy grid
