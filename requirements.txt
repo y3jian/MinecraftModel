@@ -3,3 +3,4 @@ trimesh>=4.0
 Pillow>=10.0
 scikit-image>=0.22
 nbtlib>=2.0
+litemapy>=0.11.0b0
