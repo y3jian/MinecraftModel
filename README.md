@@ -1,7 +1,7 @@
 # Scan2Craft 
  I wanted to honour my favourite Hello Kitty stuffed animal in my Minecraft world with a GIANT statue...
-/n but didn't want to spend hours building it. 
-/n Scan2Craft is a Python pipeline that converts real-life scans (GLB/OBJ/PLY) into Minecraft .litematic structures.
+<br>but didn't want to spend hours building it. 
+<br>Scan2Craft is a Python pipeline that converts real-life scans (GLB/OBJ/PLY) into Minecraft .litematic structures.
 
 ## How it Works
 Scan2Craft takes an input 3D scan, voxelizes a mesh, samples texture colours, maps colours to a customizable block palette, and exports a Litematica schematic ready to be used in Minecraft!
